@@ -1,0 +1,72 @@
+---
+- name: Gather variables for each processor architecture
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_architecture | lower }}.yml"
+
+- name: Install lighthouse binary from remote source
+  block:
+    - name: create new directory for binary
+      file:
+        path: '{{ base_path }}/bin'
+        state: directory
+        owner: '{{ user }}'
+        group: '{{ group }}'
+    - name: Unarchive Cronos Release file from github
+      unarchive:
+        src: "https://github.com/sigp/lighthouse/releases/download/v{{ release_tag }}/lighthouse-v{{ release_tag }}-{{ arch }}-unknown-linux-gnu-portable.tar.gz"
+        dest: "{{ base_path }}/lighthouse/{{ release_tag }}"
+        remote_src: yes
+        creates: "{{ base_path }}/lighthouse/{{ release_tag }}/lighthouse"
+    - name: copy binary to PATH bin
+      copy:
+        src: '{{ base_path }}/lighthouse/{{ release_tag }}/lighthouse'
+        dest: '{{ base_path }}/bin/lighthouse'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: '755'
+        remote_src: yes
+        force: yes
+
+- name: Lighthouse - create data directory
+  become: yes
+  file:
+    path: /var/lib/lighthouse
+    state: directory
+    mode: 'u=rwx,g=rx'
+    owner: root
+    group: lighthouse
+
+- name: Lighthouse - create dedicated user for beacon node
+  become: yes
+  user:
+    name: lhbn
+    create_home: no
+    home: /nonexistent
+    shell: /bin/false
+    groups: lighthouse
+
+- name: Lighthouse - prepare workspace for beacon node user
+  become: yes
+  file:
+    path: /var/lib/lighthouse/beacon
+    state: directory
+    recurse: yes
+    mode: o-rwx
+    owner: lhbn
+    group: lhbn
+
+
+- name: Lighthouse - install systemd service for beacon node
+  become: yes
+  copy:
+    src: lighthouse-beacon.service
+    dest: /etc/systemd/system/lighthouse-beacon.service
+    owner: root
+    group: root
+    mode: 0600
+
+- name: systemd daemon-reload
+  become: yes
+  systemd:
+    daemon_reload: yes

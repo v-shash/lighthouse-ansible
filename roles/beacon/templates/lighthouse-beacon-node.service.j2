@@ -1,0 +1,20 @@
+[Unit]
+Description=Lighthouse Beacon Node (ETH2)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=lhbn
+Group=lhbn
+UMask=0077
+Restart=always
+RestartSec=5
+ExecStart={{ base_path }}/bin/lighthouse bn \
+    --datadir /var/lib/lighthouse \
+    --network mainnet \
+    --metrics \
+    --metrics-endpoint 0.0.0.0 \
+
+[Install]
+WantedBy=multi-user.target
