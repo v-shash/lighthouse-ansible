@@ -1,7 +1,8 @@
 ---
 - name: Run beacon node roles
   hosts: nodes
-  remote_user: '{{ user }}'
+  remote_user: "{{ user }}"
   become: yes
   roles:
-    - beacon
+    # - beacon
+    - promtail

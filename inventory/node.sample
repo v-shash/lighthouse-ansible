@@ -1,0 +1,31 @@
+nodes:
+  hosts:
+    test_node:
+      ansible_host: xx.xx.xx.xx # TODO beacon node ip address
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+
+  vars:
+    user: vc
+    group: vc
+    base_path: /vc
+    release_tag: 2.4.0
+
+    data_dir: /mnt/.lighthouse/data
+
+    promtail_loki_server_url: http://xx.xx.xx.xx:3100 # TODO loki server url
+
+    promtail_config_scrape_configs:
+      - job_name: journal
+        journal:
+          json: false
+          max_age: 12h
+          path: /var/log/journal
+          labels:
+            job: systemd-journal
+            instance: # TODO beacon node ip address
+        relabel_configs:
+          - source_labels: ["__journal__systemd_unit"]
+            target_label: "unit"
+          - action: "keep"
+            source_labels: ["__journal__systemd_unit"]
+            regex: "lighthouse-beacon.service"

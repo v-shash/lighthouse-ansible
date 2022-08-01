@@ -8,11 +8,11 @@
   block:
     - name: create new directory for binary
       file:
-        path: '{{ base_path }}/bin'
+        path: "{{ base_path }}/lighthouse/{{ release_tag }}"
         state: directory
-        owner: '{{ user }}'
-        group: '{{ group }}'
-    - name: Unarchive Cronos Release file from github
+        owner: "{{ user }}"
+        group: "{{ group }}"
+    - name: Unarchive lighthouse Release file from github
       unarchive:
         src: "https://github.com/sigp/lighthouse/releases/download/v{{ release_tag }}/lighthouse-v{{ release_tag }}-{{ arch }}-unknown-linux-gnu-portable.tar.gz"
         dest: "{{ base_path }}/lighthouse/{{ release_tag }}"
@@ -20,53 +20,40 @@
         creates: "{{ base_path }}/lighthouse/{{ release_tag }}/lighthouse"
     - name: copy binary to PATH bin
       copy:
-        src: '{{ base_path }}/lighthouse/{{ release_tag }}/lighthouse'
-        dest: '{{ base_path }}/bin/lighthouse'
-        owner: '{{ user }}'
-        group: '{{ group }}'
-        mode: '755'
+        src: "{{ base_path }}/lighthouse/{{ release_tag }}/lighthouse"
+        dest: "{{ base_path }}/bin/lighthouse"
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: "755"
         remote_src: yes
         force: yes
 
-- name: Lighthouse - create data directory
-  become: yes
+- name: create data directory
   file:
-    path: /var/lib/lighthouse
+    path: "{{ data_dir }}"
     state: directory
-    mode: 'u=rwx,g=rx'
-    owner: root
-    group: lighthouse
+    owner: "{{ user }}"
+    group: "{{ group }}"
 
-- name: Lighthouse - create dedicated user for beacon node
-  become: yes
-  user:
-    name: lhbn
-    create_home: no
-    home: /nonexistent
-    shell: /bin/false
-    groups: lighthouse
-
-- name: Lighthouse - prepare workspace for beacon node user
-  become: yes
-  file:
-    path: /var/lib/lighthouse/beacon
-    state: directory
-    recurse: yes
-    mode: o-rwx
-    owner: lhbn
-    group: lhbn
-
-
-- name: Lighthouse - install systemd service for beacon node
-  become: yes
-  copy:
-    src: lighthouse-beacon.service
+- name: Create lighthouse-beacon service file
+  template:
+    src: lighthouse-beacon.service.j2
     dest: /etc/systemd/system/lighthouse-beacon.service
-    owner: root
-    group: root
-    mode: 0600
+    mode: "644"
 
 - name: systemd daemon-reload
   become: yes
   systemd:
     daemon_reload: yes
+
+- name: Enable service lighthouse-beacon and ensure it is not masked
+  systemd:
+    name: lighthouse-beacon
+    enabled: yes
+    masked: no
+
+- name: Start lighthouse-beacon
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: lighthouse-beacon

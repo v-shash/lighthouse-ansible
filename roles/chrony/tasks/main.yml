@@ -1,13 +1,13 @@
 ---
 - name: make sure chronyd is installed
-  yum:
-    name: chrony
-    state: latest
+  apt:
+    name: "chrony"
+    state: present
     update_cache: yes
 
 - name: deploy chrony.conf template
   template:
-    src: chrony.conf
+    src: chrony.conf.j2
     dest: /etc/chrony.conf
     owner: root
     group: root
